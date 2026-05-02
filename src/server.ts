@@ -1,54 +1,150 @@
-const server = Bun.serve({
-	port: 3000,
-	fetch(request) {
-		// Membuat objek URL untuk memudahkan parsing
-		const url = new URL(request.url);
-		const path = url.pathname; // hanya path, tanpa query string
-		const method = request.method;
-		console.log(`[${new Date().toLocaleTimeString()}] ${method} ${path}`);
+const PORT = 3001;
 
-		// Routing manual
-		if (path === '/' && method === 'GET') {
-			return new Response(`<h1>🏠 Halaman Utama (Bun)</h1><p>Selamat datang di server Bun + TypeScript!</p>`, {
-				headers: { 'Content-Type': 'text/html' },
-			});
-		} else if (path === '/about' && method === 'GET') {
-			return new Response(`<h1>📄 Tentang Kami (Bun)</h1><p>Routing manual dengan Bun sangat mudah!</p>`, {
-				headers: { 'Content-Type': 'text/html' },
-			});
-		} else if (path === '/api/users' && method === 'GET') {
-			return new Response(JSON.stringify([
-				{ id: 1, name: 'Alice' },
-				{ id: 2, name: 'Bob' },
-			]), {
-				headers: { 'Content-Type': 'application/json' },
-			});
-		} else if (path === '/api/users' && method === 'POST') {
-			// Untuk POST, kita bisa membaca body jika diperlukan
-			// Di sini kita hanya mengembalikan respons sukses
-			return new Response(JSON.stringify({ message: 'User berhasil dibuat (Bun)' }), {
-				status: 201,
-				headers: { 'Content-Type': 'application/json' },
-			});
-		} else if (path === '/products' && method === 'GET') {
-			return new Response(JSON.stringify([
-				{ id: 1, name: 'Laptop' },
-				{ id: 2, name: 'Mouse' },
-			]), {
-				headers: { 'Content-Type': 'application/json' },
-			});
-		} else if (path === '/products' && method === 'POST') {
-			return new Response(JSON.stringify({ message: 'suskes (simulasi)' }), {
-				status: 201,
-				headers: { 'Content-Type': 'application/json' },
-			});
-		} else {
-			return new Response(`<h1>❌ 404 - Halaman Tidak Ditemukan (Bun)</h1>`, {
-				status: 404,
-				headers: { 'Content-Type': 'text/html' },
-			});
-		}
-	},
+// Data statis
+const users = [
+    { id: 1, name: "Timothy", email: "timothy@mail.com" },
+    { id: 2, name: "Alicia", email: "alicia@mail.com" },
+    { id: 3, name: "Rafael", email: "rafael@mail.com" },
+];
+
+const products = [
+    { id: 1, name: "Laptop" },
+    { id: 2, name: "Mouse" },
+];
+
+// Middleware sederhana: logging + hitung durasi request
+function logRequest(method: string, path: string, startTime: number): void {
+    const duration = Date.now() - startTime;
+
+    console.log(
+        `[${new Date().toLocaleTimeString()}] ${method} ${path} - ${duration}ms`
+    );
+}
+
+const server = Bun.serve({
+    port: PORT,
+
+    fetch(request) {
+        const startTime = Date.now();
+
+        const url = new URL(request.url);
+        const path = url.pathname;
+        const method = request.method;
+
+        let response: Response;
+
+        // GET /
+        if (path === '/' && method === 'GET') {
+            response = new Response(
+                JSON.stringify({
+                    message: "Selamat datang di halaman Home Bun"
+                }),
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+        // GET /about
+        } else if (path === '/about' && method === 'GET') {
+            response = new Response(
+                JSON.stringify({
+                    message: "Halaman About Bun"
+                }),
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+        // GET /products
+        } else if (path === '/products' && method === 'GET') {
+            response = new Response(
+                JSON.stringify(products),
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+        // POST /products
+        } else if (path === '/products' && method === 'POST') {
+            response = new Response(
+                JSON.stringify({
+                    message: "Produk berhasil ditambahkan (simulasi Bun)"
+                }),
+                {
+                    status: 201,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+        // GET /users
+        } else if (path === '/users' && method === 'GET') {
+            response = new Response(
+                JSON.stringify(users),
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+        // GET /users/:id
+        } else if (path.startsWith('/users/') && method === 'GET') {
+            const id = parseInt(path.split('/')[2] ?? '0');
+
+            const user = users.find((u) => u.id === id);
+
+            if (user) {
+                response = new Response(
+                    JSON.stringify(user),
+                    {
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+
+            } else {
+                response = new Response(
+                    JSON.stringify({
+                        message: `User dengan ID ${id} tidak ditemukan`
+                    }),
+                    {
+                        status: 404,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+            }
+
+        // Route tidak ditemukan
+        } else {
+            response = new Response(
+                JSON.stringify({
+                    message: "Route tidak ditemukan"
+                }),
+                {
+                    status: 404,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+        }
+
+        // Middleware logging
+        logRequest(method, path, startTime);
+
+        return response;
+    }
 });
 
 console.log(`🚀 Server Bun berjalan di http://localhost:${server.port}`);
